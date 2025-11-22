@@ -12,8 +12,6 @@ DIR_INTERCAMBIO = r"C:\FirmaONPE\intercambio"
 DEFAULT_SIGNER_EXE = r"C:\FirmaONPE\AppFirmaONPE.exe"
 
 def upload_file(url, file_path, token=None):
-    """Sube el archivo firmado a Laravel usando requests."""
-    
     files = {
         'documento_firmado': (os.path.basename(file_path), open(file_path, 'rb'), 'application/pdf')
     }
@@ -87,13 +85,10 @@ def main():
         # Ejecutar Firmador
         signer_exe = os.getenv('FIRMADOR_EXE', DEFAULT_SIGNER_EXE)
         proceso = None
-
         if os.path.exists(signer_exe):
             try:
                 cmd = [signer_exe, ruta_input]
                 work_dir = os.path.dirname(signer_exe)
-                print(f"   [DEBUG] Ejecutando comando: {cmd}")
-                print(f"   [DEBUG] Directorio de trabajo: {work_dir}")
                 proceso = subprocess.Popen(cmd, cwd=work_dir)
             except Exception as e:
                 respuesta['error'] = f'Error al iniciar firmador: {e}'
@@ -138,21 +133,21 @@ def main():
             
             time.sleep(1)
 
-        # Procesar resultado
+        # cierra cuando termino el tiempo o se firmo correctamente
+        if proceso and proceso.poll() is None:
+            try:
+                proceso.terminate()
+            except:
+                pass
+
         if firmado:
-            if proceso and proceso.poll() is None:
-                try:
-                    proceso.terminate()
-                except:
-                    pass
-            
             try:
                 res_upload = upload_file(url_upload, ruta_output, token)
                 respuesta['exito'] = True
                 respuesta['mensaje'] = 'Documento firmado y subido exitosamente.'
                 respuesta['datos_servidor'] = res_upload
             except Exception as e:
-                respuesta['error'] = f'Error subiendo archivo a Laravel: {e}'
+                respuesta['error'] = f'Error subiendo archivo a Servidor: {e}'
         else:
             respuesta['error'] = 'El proceso finalizó sin detectar el documento firmado ([F]).'
 
