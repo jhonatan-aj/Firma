@@ -56,3 +56,22 @@ Route::prefix('perfiles')->group(function () {
 Route::get('/obtener-niveles-academicos-unheval', [UnhevalController::class, 'obtenerNiveles']);
 Route::get('/niveles-academicos-activos', [NivelController::class, 'index']);
 Route::post('/actualizar-niveles-academicos', [NivelController::class, 'store']);
+
+use App\Http\Controllers\MembreteController;
+use App\Http\Controllers\FormatoController;
+
+// Membretes
+Route::prefix('membretes')->group(function () {
+    Route::get('/', [MembreteController::class, 'index']);
+    Route::get('/activos', [MembreteController::class, 'active']);
+    Route::post('/', [MembreteController::class, 'store']);
+    Route::post('/{id}', [MembreteController::class, 'update']);
+});
+
+// Formatos
+Route::prefix('formatos')->group(function () {
+    Route::get('/', [FormatoController::class, 'index']);
+    Route::get('/activos', [FormatoController::class, 'active']);
+    Route::post('/', [FormatoController::class, 'store']);
+    Route::post('/{id}', [FormatoController::class, 'update']);
+});
