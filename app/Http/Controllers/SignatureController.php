@@ -12,7 +12,7 @@ class SignatureController extends Controller
 
     public function getTempDocumentPath()
     {
-        $relativePath = 'temp/documento.pdf';
+        $relativePath = 'tesiya ahora simp/documento.pdf';
 
         if (!Storage::exists($relativePath)) {
             return response()->json(['error' => 'Documento temporal no encontrado. Asegúrate de generar uno en storage/app/temp/documento.pdf'], 404);
@@ -40,7 +40,7 @@ class SignatureController extends Controller
         $document = SignedDocument::create([
             'original_name' => $originalName,
             'file_path' => $storedPath,
-            'status' => 'completed' // Ya llega firmado
+            'status' => 'completed'
         ]);
 
         return response()->json([

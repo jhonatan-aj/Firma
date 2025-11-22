@@ -108,16 +108,32 @@ def main():
         timeout = 300 
         inicio = time.time()
         firmado = False
+        
+        # comparar los pesos
+        try:
+            size_original = os.path.getsize(ruta_input)
+        except:
+            size_original = -1
 
         while (time.time() - inicio) < timeout:
             if os.path.exists(ruta_output):
-                time.sleep(1) 
-                firmado = True
-                break
+                try:
+                    size_new = os.path.getsize(ruta_output)
+                    if size_new > 0 and size_new != size_original:
+                        time.sleep(2) 
+                        firmado = True
+                        break
+                except:
+                    pass
             
             if proceso and proceso.poll() is not None:
                 if os.path.exists(ruta_output):
-                    firmado = True
+                    try:
+                        size_new = os.path.getsize(ruta_output)
+                        if size_new > 0 and size_new != size_original:
+                            firmado = True
+                    except:
+                        pass
                 break
             
             time.sleep(1)

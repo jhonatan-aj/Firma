@@ -28,7 +28,7 @@ Route::get('/signature/download/{id}', [SignatureController::class, 'download'])
 Route::post('/firma/upload-callback', function (Request $request) {
 
     $request->validate([
-        'documento_firmado' => 'required|file|mimes:pdf|max:10240', // Ajusta las reglas según necesites
+        'documento_firmado' => 'required|file|mimes:pdf|max:10240',
     ]);
 
     $file = $request->file('documento_firmado');
