@@ -42,3 +42,17 @@ Route::post('/firma/upload-callback', function (Request $request) {
         'filename' => $nombre_final
     ], 200);
 })->name('firma.upload');
+
+
+// Perfiles
+Route::prefix('perfiles')->group(function () {
+    Route::get('/', [PerfilController::class, 'index']);
+    Route::get('/activos', [PerfilController::class, 'activos']);
+    Route::post('/', [PerfilController::class, 'store']);
+    Route::post('/update', [PerfilController::class, 'update']);
+});
+
+//Niveles
+Route::get('/obtener-niveles-academicos-unheval', [UnhevalController::class, 'obtenerNiveles']);
+Route::get('/niveles-academicos-activos', [NivelController::class, 'index']);
+Route::post('/actualizar-niveles-academicos', [NivelController::class, 'store']);
