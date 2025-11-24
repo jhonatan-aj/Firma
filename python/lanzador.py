@@ -42,6 +42,10 @@ def main():
         'datos_servidor': None
     }
 
+    ruta_input = None
+    ruta_output = None
+    proceso = None
+
     try:
         #  Valida el  origen
         if not os.path.exists(ruta_origen):
@@ -84,7 +88,7 @@ def main():
 
         # Ejecutar Firmador
         signer_exe = os.getenv('FIRMADOR_EXE', DEFAULT_SIGNER_EXE)
-        proceso = None
+        
         if os.path.exists(signer_exe):
             try:
                 cmd = [signer_exe, ruta_input]
@@ -137,6 +141,10 @@ def main():
         if proceso and proceso.poll() is None:
             try:
                 proceso.terminate()
+                try:
+                    proceso.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proceso.kill()
             except:
                 pass
 
@@ -151,21 +159,35 @@ def main():
         else:
             respuesta['error'] = 'El proceso finalizó sin detectar el documento firmado ([F]).'
 
-        # Limpia los archivos de la carpeta de intercambio
-        try:
-            if os.path.exists(ruta_input):
-                os.remove(ruta_input)
-            if os.path.exists(ruta_output):
-                os.remove(ruta_output)
-            
-            # Borra el archivo original si se firmó y subió correctamente
-            if respuesta['exito'] and os.path.exists(ruta_origen):
-                os.remove(ruta_origen)
-        except:
-            pass
-
     except Exception as e:
         respuesta['error'] = f'Error inesperado en script: {str(e)}'
+
+    finally:
+        # Asegurar limpieza de archivos y procesos
+        if proceso and proceso.poll() is None:
+            try:
+                proceso.terminate()
+                proceso.wait(timeout=2)
+            except:
+                try:
+                    proceso.kill()
+                except:
+                    pass
+
+        # Lista de archivos a limpiar (intercambio + origen)
+        archivos_a_borrar = [ruta_input, ruta_output]
+        if ruta_origen:
+            archivos_a_borrar.append(ruta_origen)
+
+        # Limpia los archivos con reintentos
+        for archivo in archivos_a_borrar:
+            if archivo and os.path.exists(archivo):
+                for _ in range(3): # Intentar 3 veces
+                    try:
+                        os.remove(archivo)
+                        break
+                    except:
+                        time.sleep(1)
 
     # Imprime el JSON
     print(json.dumps(respuesta))
