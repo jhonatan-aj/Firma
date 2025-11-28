@@ -16,7 +16,6 @@
 <body
     style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f3f2ef; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
 
-    <!-- Wrapper principal -->
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
         style="background-color: #f3f2ef;">
         <tr>

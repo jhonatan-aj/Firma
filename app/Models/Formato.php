@@ -31,4 +31,11 @@ class Formato extends Model
     {
         return $query->where('estado', true);
     }
+
+    // Relación con trámites (many-to-many)
+    public function tramites()
+    {
+        return $this->belongsToMany(Tramite::class, 'formato_tramite', 'formato_id', 'tramite_id')
+            ->withTimestamps();
+    }
 }

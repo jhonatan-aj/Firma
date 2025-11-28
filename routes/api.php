@@ -75,3 +75,15 @@ Route::prefix('formatos')->group(function () {
     Route::post('/', [FormatoController::class, 'store']);
     Route::post('/{id}', [FormatoController::class, 'update']);
 });
+
+use App\Http\Controllers\TramiteController;
+
+// Trámites
+Route::prefix('tramites')->group(function () {
+    Route::get('/', [TramiteController::class, 'index']);
+    Route::get('/activos', [TramiteController::class, 'active']);
+    Route::get('/{id}', [TramiteController::class, 'show']);
+    Route::post('/', [TramiteController::class, 'store']);
+    Route::post('/{id}', [TramiteController::class, 'update']);
+    Route::delete('/{id}', [TramiteController::class, 'destroy']);
+});
