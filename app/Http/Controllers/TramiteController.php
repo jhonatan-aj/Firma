@@ -30,8 +30,6 @@ class TramiteController extends Controller
                 'prerequisito' => $tramite->prerequisitos->pluck('id')->toArray(),
                 'requisito' => $tramite->requisitos->pluck('id')->toArray(),
                 'formato' => $tramite->formatos->pluck('id')->toArray(),
-
-                // Objetos completos para mostrar
                 'prerequisitos' => $tramite->prerequisitos->map(function ($prereq) {
                     return [
                         'id' => $prereq->id,
@@ -298,16 +296,31 @@ class TramiteController extends Controller
             }
 
             if ($request->has('requisito')) {
-                $tramite->requisitos()->delete();
                 if (is_array($request->requisito)) {
-                    foreach ($request->requisito as $reqData) {
-                        Requisito::create([
-                            'nombre' => $reqData['nombre'],
-                            'descripcion' => $reqData['descripcion'] ?? null,
-                            'estado' => $reqData['estado'],
-                            'tipo' => $reqData['tipo'],
-                            'tramite_id' => $tramite->id,
-                        ]);
+                    $requisitosActualizados = collect($request->requisito);
+
+                    $idsEnPeticion = $requisitosActualizados->pluck('id')->filter();
+
+                    // Eliminar requisitos que ya no están en la petición
+                    $tramite->requisitos()->whereNotIn('id', $idsEnPeticion)->delete();
+
+                    foreach ($requisitosActualizados as $reqData) {
+                        if (isset($reqData['id']) && $reqData['id']) {
+                            $tramite->requisitos()->where('id', $reqData['id'])->update([
+                                'nombre' => $reqData['nombre'],
+                                'descripcion' => $reqData['descripcion'] ?? null,
+                                'estado' => $reqData['estado'],
+                                'tipo' => $reqData['tipo'],
+                            ]);
+                        } else {
+                            Requisito::create([
+                                'nombre' => $reqData['nombre'],
+                                'descripcion' => $reqData['descripcion'] ?? null,
+                                'estado' => $reqData['estado'],
+                                'tipo' => $reqData['tipo'],
+                                'tramite_id' => $tramite->id,
+                            ]);
+                        }
                     }
                 }
             }
