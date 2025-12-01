@@ -87,3 +87,15 @@ Route::prefix('tramites')->group(function () {
     Route::post('/{id}', [TramiteController::class, 'update']);
     Route::delete('/{id}', [TramiteController::class, 'destroy']);
 });
+
+use App\Http\Controllers\ProcesoController;
+
+// Procesos (Flujo de trabajo de trámites)
+Route::prefix('procesos')->group(function () {
+    Route::post('/previsualizar', [ProcesoController::class, 'previsualizar']);
+    Route::post('/registrar', [ProcesoController::class, 'registrar']);
+    Route::get('/', [ProcesoController::class, 'index']);
+    Route::get('/{id}', [ProcesoController::class, 'show']);
+    Route::post('/{id}/firmar-manual', [ProcesoController::class, 'firmarManual']);
+    Route::post('/{id}/firmar-digital', [ProcesoController::class, 'firmarDigital']);
+});
