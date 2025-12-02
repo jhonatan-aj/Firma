@@ -12,11 +12,15 @@ class HistorialProceso extends Model
         'proceso_id',
         'usuario_id',
         'accion',
-        'comentario'
+        'comentario',
+        'ultimo',
+        'recepcionado'
     ];
 
     protected $casts = [
         'accion' => 'string',
+        'ultimo' => 'boolean',
+        'recepcionado' => 'datetime',
     ];
 
     // Relaciones

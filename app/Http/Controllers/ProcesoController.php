@@ -74,6 +74,18 @@ class ProcesoController extends Controller
             });
             $tesis->setRelation('integrantes', $tesistas);
 
+            // Preparar requisitos para el PDF (nombres de requisitos)
+            $requisitos = [];
+            if ($request->has('requisitos') && is_array($request->requisitos)) {
+                $requisitosIds = collect($request->requisitos)->pluck('requisito')->filter()->toArray();
+                $requisitos = \App\Models\Requisito::whereIn('id', $requisitosIds)
+                    ->get()
+                    ->map(function ($req) {
+                        return ['nombre' => $req->nombre];
+                    })
+                    ->toArray();
+            }
+
             // Generar PDF temporal
             $resultadoPdf = $this->formatoService->generarPDF(
                 $request->documento['formato'],
@@ -81,7 +93,8 @@ class ProcesoController extends Controller
                 $request->documento['fundamento'],
                 $tesis,
                 $request->documento['destinatario'],
-                'digital' // Siempre generar en temp para previsualizar
+                'digital', // Siempre generar en temp para previsualizar
+                $requisitos // Pasar requisitos
             );
 
             return response()->json([
@@ -161,20 +174,22 @@ class ProcesoController extends Controller
                 $firmaValida = true;
             }
 
-            // 2. Crear Proceso y Relaciones (Igual que antes)
-            $proceso = Proceso::create([
-                'tramite_id' => $request->tramite_id,
-                'numero_tramite' => $this->generarNumeroTramite(),
-                'estado' => 'en_proceso', // Ya nace firmado/en proceso
-            ]);
-
+            // 2. Crear Tesis primero
             $tesis = Tesis::create([
                 'titulo' => $request->general['titulo'],
                 'nivel_id' => $request->general['nivel'],
                 'mencion_id' => $request->general['mencion'],
-                'proceso_id' => $proceso->id,
             ]);
 
+            // 3. Crear Proceso con la tesis_id
+            $proceso = Proceso::create([
+                'tramite_id' => $request->tramite_id,
+                'tesis_id' => $tesis->id,
+                'numero_tramite' => $this->generarNumeroTramite(),
+                'estado' => 'en_proceso', // Ya nace firmado/en proceso
+            ]);
+
+            // 4. Crear integrantes de la tesis
             foreach ($request->general['tesistas'] as $personaId) {
                 IntegranteTesis::create(['tesis_id' => $tesis->id, 'persona_id' => $personaId, 'rol' => 'tesista']);
             }

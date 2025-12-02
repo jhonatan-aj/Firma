@@ -12,7 +12,6 @@ class Tesis extends Model
         'titulo',
         'nivel_id',
         'mencion_id',
-        'proceso_id',
         'descripcion'
     ];
 
@@ -27,9 +26,9 @@ class Tesis extends Model
         return $this->belongsTo(Mencion::class);
     }
 
-    public function proceso()
+    public function procesos()
     {
-        return $this->belongsTo(Proceso::class);
+        return $this->hasMany(Proceso::class);
     }
 
     public function integrantes()

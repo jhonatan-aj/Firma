@@ -10,6 +10,7 @@ class Proceso extends Model
 
     protected $fillable = [
         'tramite_id',
+        'tesis_id',
         'numero_tramite',
         'estado',
         'observaciones'
@@ -27,7 +28,7 @@ class Proceso extends Model
 
     public function tesis()
     {
-        return $this->hasOne(Tesis::class);
+        return $this->belongsTo(Tesis::class);
     }
 
     public function historiales()

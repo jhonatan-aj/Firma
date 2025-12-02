@@ -6,13 +6,14 @@ use App\Models\Formato;
 use App\Models\Tesis;
 use App\Models\Destinatario;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class FormatoService
 {
     /**
      * Generar PDF desde un formato con reemplazo de variables
      */
-    public function generarPDF($formatoId, $sumilla, $fundamento, $tesis, $destinatariosIds, $tipoFirma = 'manual')
+    public function generarPDF($formatoId, $sumilla, $fundamento, $tesis, $destinatariosIds, $tipoFirma = 'manual', $requisitos = [])
     {
         // Obtener formato con membrete
         $formato = Formato::with('membrete')->find($formatoId);
@@ -23,7 +24,7 @@ class FormatoService
         $contenidoHtml = $formato->contenido;
 
         // Obtener datos para reemplazar variables
-        $variables = $this->obtenerVariables($sumilla, $fundamento, $tesis, $destinatariosIds);
+        $variables = $this->obtenerVariables($sumilla, $fundamento, $tesis, $destinatariosIds, $requisitos);
 
         // Reemplazar variables en el HTML
         $htmlProcesado = $this->reemplazarVariables($contenidoHtml, $variables);
@@ -41,11 +42,11 @@ class FormatoService
     /**
      * Obtener todas las variables para reemplazo
      */
-    private function obtenerVariables($sumilla, $fundamento, $tesis, $destinatariosIds)
+    private function obtenerVariables($sumilla, $fundamento, $tesis, $destinatariosIds, $requisitos = [])
     {
         // Nivel y mención
-        $nivel = $tesis->nivel->nombre ?? '';
-        $mencion = $tesis->mencion->nombre ?? '';
+        $nivel = $tesis->nivel->nivel ?? '';
+        $mencion = $tesis->mencion->mencion ?? '';
 
         // Tesistas (nombres completos separados por coma)
         $tesistas = $tesis->tesistas()->get()
@@ -71,6 +72,17 @@ class FormatoService
         // Fecha actual en español
         $fecha = now()->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
 
+        // Requisitos presentados (lista HTML)
+        $requisitosHtml = '';
+        if (!empty($requisitos)) {
+            $requisitosHtml = '<ul>';
+            foreach ($requisitos as $req) {
+                $nombreReq = $req['nombre'] ?? 'Requisito';
+                $requisitosHtml .= "<li>{$nombreReq}</li>";
+            }
+            $requisitosHtml .= '</ul>';
+        }
+
         return [
             '<<< Asunto >>>' => $sumilla,
             '<<< Contenido >>>' => $fundamento,
@@ -81,6 +93,7 @@ class FormatoService
             '<<< Mencion >>>' => $mencion,
             '<<< Tesistas >>>' => $tesistas,
             '<<< Asesor >>>' => $asesor,
+            '<<< Requisitos >>>' => $requisitosHtml,
         ];
     }
 
@@ -93,7 +106,7 @@ class FormatoService
     }
 
     /**
-     * Convertir HTML a PDF
+     * Convertir HTML a PDF usando dompdf
      */
     private function convertirHtmlAPdf($html, $tipoFirma = 'manual')
     {
@@ -104,29 +117,23 @@ class FormatoService
         $directorio = $tipoFirma === 'digital' ? 'temp' : 'documentos/generados';
         $nombreArchivo = uniqid('doc_') . '.pdf';
 
-        // TODO: Implementar conversión HTML a PDF
-        // Opciones:
-        // 1. Usar dompdf: $pdf = PDF::loadHTML($html);
-        // 2. Usar wkhtmltopdf: exec("wkhtmltopdf ...")
-        // 3. Usar Python: exec("python python/generar_pdf.py ...")
+        // Generar PDF con dompdf
+        $pdf = Pdf::loadHTML($html);
 
-        // Por ahora, guardar el HTML como referencia
-        $htmlPath = $directorio . '/' . str_replace('.pdf', '.html', $nombreArchivo);
-        Storage::disk('public')->put($htmlPath, $html);
+        // Configuración adicional (opcional)
+        $pdf->setPaper('A4', 'portrait'); // Tamaño y orientación
 
-        // Crear un PDF dummy para que el link funcione en pruebas
-        // En producción esto será reemplazado por el PDF real
-        Storage::disk('public')->put($directorio . '/' . $nombreArchivo, $html); // Guardamos el HTML como "PDF" por ahora para que descargue algo
+        // Guardar el PDF
+        $rutaCompleta = storage_path('app/public/' . $directorio . '/' . $nombreArchivo);
+
+        // Crear directorio si no existe
+        if (!file_exists(dirname($rutaCompleta))) {
+            mkdir(dirname($rutaCompleta), 0755, true);
+        }
+
+        // Guardar el PDF
+        $pdf->save($rutaCompleta);
 
         return $directorio . '/' . $nombreArchivo;
-    }
-
-    /**
-     * Generar PDF real (implementar según librería elegida)
-     */
-    private function generarPdfReal($html)
-    {
-        // TODO: Implementar con dompdf, wkhtmltopdf o Python
-        return '';
     }
 }

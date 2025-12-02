@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('procesos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tramite_id')->constrained('tramites');
+            $table->foreignId('tesis_id')->constrained('tesis')->onDelete('cascade');
             $table->string('numero_tramite')->unique(); // TR-2025-00001
             $table->enum('estado', ['iniciado', 'en_proceso', 'observado', 'aprobado', 'rechazado', 'finalizado'])->default('iniciado');
             $table->text('observaciones')->nullable();

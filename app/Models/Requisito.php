@@ -26,6 +26,12 @@ class Requisito extends Model
         return $this->belongsTo(Tramite::class, 'tramite_id');
     }
 
+    // Relación con plantillas (un requisito puede tener múltiples plantillas)
+    public function plantillas()
+    {
+        return $this->hasMany(PlantillaRequisito::class);
+    }
+
     // Scope para requisitos activos
     public function scopeActivos($query)
     {

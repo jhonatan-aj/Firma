@@ -14,6 +14,8 @@ return new class extends Migration
             $table->foreignId('usuario_id')->constrained('usuarios'); // Quien realizó la acción
             $table->enum('accion', ['inicio', 'envio', 'recepcion', 'observacion', 'aprobacion', 'rechazo', 'firma', 'finalizacion', 'registro_firma']);
             $table->text('comentario')->nullable();
+            $table->boolean('ultimo')->default(false); // Marca el último registro para seguimiento
+            $table->timestamp('recepcionado')->nullable(); // Cuándo fue recepcionado el documento
             $table->timestamps();
         });
     }
