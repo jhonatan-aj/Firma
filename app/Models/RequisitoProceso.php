@@ -34,4 +34,14 @@ class RequisitoProceso extends Model
     {
         return $this->hasMany(DocumentoRequisito::class);
     }
+
+    public function historialesProceso()
+    {
+        return $this->belongsToMany(
+            HistorialProceso::class,
+            'requisito_proceso_historial',
+            'requisito_proceso_id',
+            'historial_proceso_id'
+        )->withTimestamps()->withPivot('observaciones');
+    }
 }

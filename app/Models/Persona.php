@@ -54,4 +54,8 @@ class Persona extends Model
         return $value ?? 'Sin registrar';
     }
 
+    public function integrantesTesis()
+    {
+        return $this->hasMany(IntegranteTesis::class);
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tramite;
 use App\Models\Requisito;
+use App\Models\PlantillaRequisito;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -13,7 +14,7 @@ class TramiteController extends Controller
 
     public function index()
     {
-        $tramites = Tramite::with(['prerequisitos', 'requisitos', 'formatos.membrete'])->get();
+        $tramites = Tramite::with(['prerequisitos', 'requisitos.plantillas', 'formatos.membrete'])->get();
 
         $data = $tramites->map(function ($tramite) {
             return [
@@ -51,6 +52,16 @@ class TramiteController extends Controller
                         'estado' => $req->estado,
                         'tipo' => $req->tipo,
                         'tramite_id' => $req->tramite_id,
+                        'plantillas' => $req->plantillas->map(function ($plantilla) {
+                            return [
+                                'id' => $plantilla->id,
+                                'nombre' => $plantilla->nombre,
+                                'ruta_archivo' => $plantilla->ruta_archivo,
+                                'tipo_archivo' => $plantilla->tipo_archivo,
+                                'descripcion' => $plantilla->descripcion,
+                                'activo' => $plantilla->activo,
+                            ];
+                        })->toArray(),
                     ];
                 })->toArray(),
 
@@ -76,7 +87,7 @@ class TramiteController extends Controller
      */
     public function active()
     {
-        $tramites = Tramite::activos()->with(['prerequisitos', 'requisitos', 'formatos.membrete'])->get();
+        $tramites = Tramite::activos()->with(['prerequisitos', 'requisitos.plantillas', 'formatos.membrete'])->get();
 
         $data = $tramites->map(function ($tramite) {
             return [
@@ -105,7 +116,7 @@ class TramiteController extends Controller
      */
     public function show($id)
     {
-        $tramite = Tramite::with(['prerequisitos', 'requisitos', 'formatos.membrete'])->find($id);
+        $tramite = Tramite::with(['prerequisitos', 'requisitos.plantillas', 'formatos.membrete'])->find($id);
 
         if (!$tramite) {
             return response()->json([
@@ -154,6 +165,12 @@ class TramiteController extends Controller
             'requisito.*.descripcion' => 'nullable|string',
             'requisito.*.estado' => 'required|boolean',
             'requisito.*.tipo' => 'required|in:obligatorio,opcional',
+            'requisito.*.plantillas' => 'nullable|array',
+            'requisito.*.plantillas.*.nombre' => 'required|string',
+            'requisito.*.plantillas.*.ruta_archivo' => 'required|string',
+            'requisito.*.plantillas.*.tipo_archivo' => 'required|string',
+            'requisito.*.plantillas.*.descripcion' => 'nullable|string',
+            'requisito.*.plantillas.*.activo' => 'nullable|boolean',
             'formato' => 'nullable|array',
             'formato.*' => 'exists:formatos,id',
         ]);
@@ -187,13 +204,27 @@ class TramiteController extends Controller
             // Crear requisitos asociados
             if ($request->has('requisito') && is_array($request->requisito)) {
                 foreach ($request->requisito as $reqData) {
-                    Requisito::create([
+                    $requisito = Requisito::create([
                         'nombre' => $reqData['nombre'],
                         'descripcion' => $reqData['descripcion'] ?? null,
                         'estado' => $reqData['estado'],
                         'tipo' => $reqData['tipo'],
                         'tramite_id' => $tramite->id,
                     ]);
+
+                    // Crear plantillas asociadas al requisito
+                    if (isset($reqData['plantillas']) && is_array($reqData['plantillas'])) {
+                        foreach ($reqData['plantillas'] as $plantillaData) {
+                            PlantillaRequisito::create([
+                                'requisito_id' => $requisito->id,
+                                'nombre' => $plantillaData['nombre'],
+                                'ruta_archivo' => $plantillaData['ruta_archivo'],
+                                'tipo_archivo' => $plantillaData['tipo_archivo'],
+                                'descripcion' => $plantillaData['descripcion'] ?? null,
+                                'activo' => $plantillaData['activo'] ?? true,
+                            ]);
+                        }
+                    }
                 }
             }
 
@@ -205,7 +236,7 @@ class TramiteController extends Controller
             DB::commit();
 
             // Recargar con relaciones
-            $tramite->load(['prerequisitos', 'requisitos', 'formatos']);
+            $tramite->load(['prerequisitos', 'requisitos.plantillas', 'formatos']);
 
             return response()->json([
                 'status' => true,
@@ -266,6 +297,13 @@ class TramiteController extends Controller
             'requisito.*.descripcion' => 'nullable|string',
             'requisito.*.estado' => 'required|boolean',
             'requisito.*.tipo' => 'required|in:obligatorio,opcional',
+            'requisito.*.plantillas' => 'nullable|array',
+            'requisito.*.plantillas.*.id' => 'nullable|exists:documentos_requisito,id',
+            'requisito.*.plantillas.*.nombre' => 'required|string',
+            'requisito.*.plantillas.*.ruta_archivo' => 'required|string',
+            'requisito.*.plantillas.*.tipo_archivo' => 'required|string',
+            'requisito.*.plantillas.*.descripcion' => 'nullable|string',
+            'requisito.*.plantillas.*.activo' => 'nullable|boolean',
             'formato' => 'nullable|array',
             'formato.*' => 'exists:formatos,id',
         ]);
@@ -306,20 +344,69 @@ class TramiteController extends Controller
 
                     foreach ($requisitosActualizados as $reqData) {
                         if (isset($reqData['id']) && $reqData['id']) {
-                            $tramite->requisitos()->where('id', $reqData['id'])->update([
+                            // Actualizar requisito existente
+                            $requisito = $tramite->requisitos()->where('id', $reqData['id'])->first();
+                            $requisito->update([
                                 'nombre' => $reqData['nombre'],
                                 'descripcion' => $reqData['descripcion'] ?? null,
                                 'estado' => $reqData['estado'],
                                 'tipo' => $reqData['tipo'],
                             ]);
+
+                            // Gestionar plantillas del requisito
+                            if (isset($reqData['plantillas']) && is_array($reqData['plantillas'])) {
+                                $plantillasActualizadas = collect($reqData['plantillas']);
+                                $idsPlantillasEnPeticion = $plantillasActualizadas->pluck('id')->filter();
+
+                                // Eliminar plantillas que ya no están
+                                $requisito->plantillas()->whereNotIn('id', $idsPlantillasEnPeticion)->delete();
+
+                                foreach ($plantillasActualizadas as $plantillaData) {
+                                    if (isset($plantillaData['id']) && $plantillaData['id']) {
+                                        // Actualizar plantilla existente
+                                        $requisito->plantillas()->where('id', $plantillaData['id'])->update([
+                                            'nombre' => $plantillaData['nombre'],
+                                            'ruta_archivo' => $plantillaData['ruta_archivo'],
+                                            'tipo_archivo' => $plantillaData['tipo_archivo'],
+                                            'descripcion' => $plantillaData['descripcion'] ?? null,
+                                            'activo' => $plantillaData['activo'] ?? true,
+                                        ]);
+                                    } else {
+                                        // Crear nueva plantilla
+                                        PlantillaRequisito::create([
+                                            'requisito_id' => $requisito->id,
+                                            'nombre' => $plantillaData['nombre'],
+                                            'ruta_archivo' => $plantillaData['ruta_archivo'],
+                                            'tipo_archivo' => $plantillaData['tipo_archivo'],
+                                            'descripcion' => $plantillaData['descripcion'] ?? null,
+                                            'activo' => $plantillaData['activo'] ?? true,
+                                        ]);
+                                    }
+                                }
+                            }
                         } else {
-                            Requisito::create([
+                            // Crear nuevo requisito
+                            $requisito = Requisito::create([
                                 'nombre' => $reqData['nombre'],
                                 'descripcion' => $reqData['descripcion'] ?? null,
                                 'estado' => $reqData['estado'],
                                 'tipo' => $reqData['tipo'],
                                 'tramite_id' => $tramite->id,
                             ]);
+
+                            // Crear plantillas del nuevo requisito
+                            if (isset($reqData['plantillas']) && is_array($reqData['plantillas'])) {
+                                foreach ($reqData['plantillas'] as $plantillaData) {
+                                    PlantillaRequisito::create([
+                                        'requisito_id' => $requisito->id,
+                                        'nombre' => $plantillaData['nombre'],
+                                        'ruta_archivo' => $plantillaData['ruta_archivo'],
+                                        'tipo_archivo' => $plantillaData['tipo_archivo'],
+                                        'descripcion' => $plantillaData['descripcion'] ?? null,
+                                        'activo' => $plantillaData['activo'] ?? true,
+                                    ]);
+                                }
+                            }
                         }
                     }
                 }
@@ -331,7 +418,7 @@ class TramiteController extends Controller
 
             DB::commit();
 
-            $tramite->load(['prerequisitos', 'requisitos', 'formatos']);
+            $tramite->load(['prerequisitos', 'requisitos.plantillas', 'formatos']);
 
             return response()->json([
                 'status' => true,

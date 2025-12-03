@@ -10,7 +10,7 @@ use Laravel\Sanctum\HasApiTokens;
 class Usuario extends Model
 {
     use HasApiTokens, HasFactory, Notifiable;
-    
+
 
     protected $fillable = ['persona_id', 'usuario', 'password', 'estado'];
 
@@ -26,5 +26,25 @@ class Usuario extends Model
     public function asignaciones()
     {
         return $this->hasMany(PersonaPerfilAsignacion::class);
+    }
+
+    public function firmas()
+    {
+        return $this->hasMany(Firma::class);
+    }
+
+    public function historialesProceso()
+    {
+        return $this->hasMany(HistorialProceso::class);
+    }
+
+    public function destinatariosAsignados()
+    {
+        return $this->hasMany(Destinatario::class);
+    }
+
+    public function requisitosFirma()
+    {
+        return $this->hasMany(RequisitoFirma::class);
     }
 }

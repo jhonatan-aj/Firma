@@ -38,4 +38,10 @@ class Formato extends Model
         return $this->belongsToMany(Tramite::class, 'formato_tramite', 'formato_id', 'tramite_id')
             ->withTimestamps();
     }
+
+    // Relación con formatos de proceso
+    public function procesoFormatos()
+    {
+        return $this->hasMany(FormatoProceso::class);
+    }
 }
